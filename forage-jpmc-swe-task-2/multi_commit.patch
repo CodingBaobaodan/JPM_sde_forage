@@ -1,0 +1,178 @@
+From e687223dd08e8b7e9c5ec194dc1d38fe010ccf8e Mon Sep 17 00:00:00 2001
+From: josiahdc <josiah.chapman@gmail.com>
+Date: Wed, 5 Oct 2022 13:05:11 -0700
+Subject: [PATCH 1/4] added requirements
+
+---
+ requirements.txt | 1 +
+ 1 file changed, 1 insertion(+)
+ create mode 100644 requirements.txt
+
+diff --git a/requirements.txt b/requirements.txt
+new file mode 100644
+index 0000000..f678e82
+--- /dev/null
++++ b/requirements.txt
+@@ -0,0 +1 @@
++python-dateutil==2.8.2
+\ No newline at end of file
+-- 
+2.25.1
+
+
+From 3022e1f02670f8336f457078532f98c50f77496e Mon Sep 17 00:00:00 2001
+From: Joe Ferrer <joe@theforage.com>
+Date: Wed, 1 Mar 2023 00:45:20 +1100
+Subject: [PATCH 2/4] Move python files to datafeed dir
+
+---
+ requirements.txt => datafeed/requirements.txt | 0
+ server.py => datafeed/server3.py              | 0
+ datafeed/test.csv                             | 0
+ 3 files changed, 0 insertions(+), 0 deletions(-)
+ rename requirements.txt => datafeed/requirements.txt (100%)
+ rename server.py => datafeed/server3.py (100%)
+ create mode 100644 datafeed/test.csv
+
+diff --git a/requirements.txt b/datafeed/requirements.txt
+similarity index 100%
+rename from requirements.txt
+rename to datafeed/requirements.txt
+diff --git a/server.py b/datafeed/server3.py
+similarity index 100%
+rename from server.py
+rename to datafeed/server3.py
+diff --git a/datafeed/test.csv b/datafeed/test.csv
+new file mode 100644
+index 0000000..e69de29
+-- 
+2.25.1
+
+
+From 539a7ce052523757f792b75855c03cd4a1e8cae1 Mon Sep 17 00:00:00 2001
+From: root <root@LAPTOP-QJKHNRH9>
+Date: Tue, 4 Jul 2023 15:45:07 -0400
+Subject: [PATCH 3/4] save APP.tsx
+
+---
+ src/App.tsx | 28 ++++++++++++++++++++++------
+ 1 file changed, 22 insertions(+), 6 deletions(-)
+
+diff --git a/src/App.tsx b/src/App.tsx
+index 0728518..a5b8085 100755
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -8,6 +8,7 @@ import './App.css';
+  */
+ interface IState {
+   data: ServerRespond[],
++  showGraph: boolean,
+ }
+ 
+ /**
+@@ -22,6 +23,7 @@ class App extends Component<{}, IState> {
+       // data saves the server responds.
+       // We use this state to parse data down to the child element (Graph) as element property
+       data: [],
++      showGraph: false,
+     };
+   }
+ 
+@@ -29,19 +31,33 @@ class App extends Component<{}, IState> {
+    * Render Graph react component with state.data parse as property data
+    */
+   renderGraph() {
+-    return (<Graph data={this.state.data}/>)
++    if (this.state.showGraph)
++      return (<Graph data={this.state.data}/>)
+   }
+ 
+   /**
+    * Get new data from server and update the state with the new data
+    */
+   getDataFromServer() {
+-    DataStreamer.getData((serverResponds: ServerRespond[]) => {
+-      // Update the state by creating a new array of data that consists of
+-      // Previous data in the state and the new data from server
+-      this.setState({ data: [...this.state.data, ...serverResponds] });
+-    });
++    // initialise counter
++    let counter = 0;
++      const interval = setInterval(() => {
++        DataStreamer.getData((serverResponds: ServerRespond[]) => {
++          // Update the state by creating a new array of data that consists of
++          // Previous data in the state and the new data from server
++          this.setState({ 
++            data: serverResponds,
++            showGraph: true,
++          });
++        });
++        counter++;
++        // clear the interval if reaching the guard value
++        if (counter > 1000) {
++          clearInterval(interval);
++        }
++      }, 100);
+   }
++     
+ 
+   /**
+    * Render the App react component
+-- 
+2.25.1
+
+
+From bfcfb5f6870e207076f873a7b1187f746ff5172c Mon Sep 17 00:00:00 2001
+From: root <root@LAPTOP-QJKHNRH9>
+Date: Tue, 4 Jul 2023 15:45:41 -0400
+Subject: [PATCH 4/4] save Graph.tsx
+
+---
+ src/Graph.tsx | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 3b2a7da..e0c49a7 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -14,7 +14,7 @@ interface IProps {
+  * Perspective library adds load to HTMLElement prototype.
+  * This interface acts as a wrapper for Typescript compiler.
+  */
+-interface PerspectiveViewerElement {
++interface PerspectiveViewerElement extends HTMLElement{
+   load: (table: Table) => void,
+ }
+ 
+@@ -32,7 +32,7 @@ class Graph extends Component<IProps, {}> {
+ 
+   componentDidMount() {
+     // Get element to attach the table from the DOM.
+-    const elem: PerspectiveViewerElement = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
++    const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+ 
+     const schema = {
+       stock: 'string',
+@@ -49,8 +49,18 @@ class Graph extends Component<IProps, {}> {
+ 
+       // Add more Perspective configurations here.
+       elem.load(this.table);
++      elem.setAttribute('view', 'y_line');
++      elem.setAttribute('column-pivots', '["stock"]');
++      elem.setAttribute('row-pivots', '["timestamp"]');
++      elem.setAttribute('columns', '["top_ask_price"]');
++      elem.setAttribute('aggregates',`
++        {"stock":"distinct count",
++        "top_ask_price":"avg",
++        "top_bid_price":"avg",
++        "timestamp":"distinct count"}`);
++      }    
+     }
+-  }
++
+ 
+   componentDidUpdate() {
+     // Everytime the data props is updated, insert the data into Perspective table
+-- 
+2.25.1
+
