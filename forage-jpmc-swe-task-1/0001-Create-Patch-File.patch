@@ -1,0 +1,106 @@
+From 777c7e29986a8a2334d95bcd8331485ea7721cd8 Mon Sep 17 00:00:00 2001
+From: Yu Jilin <jerryyu3147@gmail.com>
+Date: Sun, 2 Jul 2023 06:25:56 -0400
+Subject: [PATCH] Create Patch File
+
+---
+ client3.py     | 24 ++++++++++++++++++++----
+ client_test.py | 21 ++++++++++++++++++++-
+ 2 files changed, 40 insertions(+), 5 deletions(-)
+
+diff --git a/client3.py b/client3.py
+index 3fc09b7..9cc43c2 100644
+--- a/client3.py
++++ b/client3.py
+@@ -35,14 +35,26 @@ def getDataPoint(quote):
+     stock = quote['stock']
+     bid_price = float(quote['top_bid']['price'])
+     ask_price = float(quote['top_ask']['price'])
+-    price = bid_price
++    price = (bid_price + ask_price) / 2
+     return stock, bid_price, ask_price, price
+ 
+ 
+ def getRatio(price_a, price_b):
+     """ Get ratio of price_a and price_b """
+     """ ------------- Update this function ------------- """
+-    return 1
++    # avoid throwing exception when the divisor is zero (can be implemented in various way according to the needs of clients)
++    if (price_b == 0):
++        return  
++    return price_a / price_b
++
++### alternative function that can throw an exception when the divior is zero
++#def getRatio(price_a, price_b):
++#    """ Get ratio of price_a and price_b """
++#    """ ------------- Update this function ------------- """
++#    # throwing exception when the divisor is zero (can be implemented in various way according to the needs of clients)
++#    if (price_b == 0):
++#        raise ZeroDivisionError("price DEF should not be zero") 
++#    return price_a / price_b
+ 
+ 
+ # Main
+@@ -52,8 +64,12 @@ if __name__ == "__main__":
+         quotes = json.loads(urllib.request.urlopen(QUERY.format(random.random())).read())
+ 
+         """ ----------- Update to get the ratio --------------- """
++        prices= {}
+         for quote in quotes:
+             stock, bid_price, ask_price, price = getDataPoint(quote)
+-            print("Quoted %s at (bid:%s, ask:%s, price:%s)" % (stock, bid_price, ask_price, price))
++            prices[stock] = price
++            # set the print out format to 2 d.p for consistency (can be varied according to the needs)
++            print("Quoted %s at (bid:%.2f, ask:%.2f, price:%.2f)" % (stock, bid_price, ask_price, price))
++
++        print("Ratio %s" % (getRatio(prices['ABC'],prices['DEF'])))
+ 
+-        print("Ratio %s" % getRatio(price, price))
+diff --git a/client_test.py b/client_test.py
+index af2bf26..5527ff5 100644
+--- a/client_test.py
++++ b/client_test.py
+@@ -1,20 +1,39 @@
+ import unittest
+-from client3 import getDataPoint
++from client3 import getDataPoint, getRatio
+ 
+ class ClientTest(unittest.TestCase):
++
++  # check the functionality of function getDataPoint() under standard circumstances
+   def test_getDataPoint_calculatePrice(self):
+     quotes = [
+       {'top_ask': {'price': 121.2, 'size': 36}, 'timestamp': '2019-02-11 22:06:30.572453', 'top_bid': {'price': 120.48, 'size': 109}, 'id': '0.109974697771', 'stock': 'ABC'},
+       {'top_ask': {'price': 121.68, 'size': 4}, 'timestamp': '2019-02-11 22:06:30.572453', 'top_bid': {'price': 117.87, 'size': 81}, 'id': '0.109974697771', 'stock': 'DEF'}
+     ]
+     """ ------------ Add the assertion below ------------ """
++    for quote in quotes:
++      self.assertEqual(getDataPoint(quote), (quote['stock'], quote['top_bid']['price'], quote['top_ask']['price'], (quote['top_bid']['price'] + quote['top_ask']['price']) / 2))
+ 
++  # check the functionality of function getDataPoint() when Bid price is greater than Ask price
+   def test_getDataPoint_calculatePriceBidGreaterThanAsk(self):
+     quotes = [
+       {'top_ask': {'price': 119.2, 'size': 36}, 'timestamp': '2019-02-11 22:06:30.572453', 'top_bid': {'price': 120.48, 'size': 109}, 'id': '0.109974697771', 'stock': 'ABC'},
+       {'top_ask': {'price': 121.68, 'size': 4}, 'timestamp': '2019-02-11 22:06:30.572453', 'top_bid': {'price': 117.87, 'size': 81}, 'id': '0.109974697771', 'stock': 'DEF'}
+     ]
+     """ ------------ Add the assertion below ------------ """
++    for quote in quotes:
++      self.assertEqual(getDataPoint(quote), (quote['stock'], quote['top_bid']['price'], quote['top_ask']['price'], (quote['top_bid']['price'] + quote['top_ask']['price'])/2))
++
++  ### checking for the alternative function getRatio() that can throw exceptions
++  # check the functionality of function getRatio() when the divisor is zero
++  #def test_getRatio_calculateRatiozero(self):
++  #  prices = [
++  #    {'ABC': 0, 'DEF': 0},
++  #    {'ABC': 20, 'DEF': 0}
++  #  ]
++  #  # check if the function raise the ZeroDivisionError exception
++  #  for price in prices:
++  #    self.assertRaises(ZeroDivisionError, getRatio, price['ABC'], price['DEF'])
++    
+ 
+ 
+   """ ------------ Add more unit tests ------------ """
+-- 
+2.25.1
+
